@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"strings"
 	"time"
@@ -39,7 +40,7 @@ func (p *Parser) Detect() (DetectResponse, error) {
 		return DetectResponse{
 			Format:     format,
 			Encoding:   "utf-8",
-			DurationMs: p.helpers.DurationMs(start),
+			DurationMs: DurationMs(start),
 		}, nil
 	case "csv":
 		delimiter := detectCSVDelimiters(lines, p.opt.Delimiters, p.opt.MaxPreviewRows)
@@ -47,7 +48,7 @@ func (p *Parser) Detect() (DetectResponse, error) {
 			Format:     format,
 			Encoding:   "utf-8",
 			Delimiter:  delimiter,
-			DurationMs: p.helpers.DurationMs(start),
+			DurationMs: DurationMs(start),
 		}, nil
 	}
 
@@ -194,4 +195,141 @@ func detectCSVDelimiters(lines []string, delimiters []string, maxCheckNumber int
 	fmt.Println("Delimiter counts:", foundDelimiters)
 
 	return foundDelimiters
+}
+
+func analyzeLine(line string, delimiter rune) LineAnalysis {
+	q := '"'
+	inQuote := false
+	fieldCount := 1
+	quoteAffected := false
+
+	runes := []rune(line)
+
+	for i := 0; i < len(runes); i++ {
+		ch := runes[i]
+
+		if ch == q {
+			if inQuote && i+1 < len(runes) && runes[i+1] == q {
+				i++
+				continue
+			}
+			inQuote = !inQuote
+			continue
+		}
+
+		if ch == delimiter {
+			if inQuote {
+				quoteAffected = true
+			} else {
+				fieldCount++
+			}
+			continue
+		}
+
+	}
+
+	invalid := inQuote
+
+	return LineAnalysis{
+		FieldCount:    fieldCount,
+		Invalid:       invalid,
+		QuoteAffected: quoteAffected && !invalid,
+	}
+}
+
+func getMode(fieldsCount []int) (int, int) {
+	freq := make(map[int]int)
+	max := 0
+	key := 0
+
+	for _, v := range fieldsCount {
+		freq[v] = freq[v] + 1
+	}
+
+	for k, v := range freq {
+		if v > max {
+			max = v
+			key = k
+		}
+	}
+	return key, max
+}
+
+func analyzeDelimiter(lines []string, delimiter rune) DelimiterAnalysis {
+	analysis := DelimiterAnalysis{
+		NumberOfLines: len(lines),
+		FieldCounts:   make([]int, 0, len(lines)),
+	}
+
+	for _, line := range lines {
+		res := analyzeLine(line, delimiter)
+
+		if res.Invalid {
+			analysis.InvalidCount++
+			continue
+		}
+
+		analysis.ValidCount++
+		analysis.FieldCounts = append(analysis.FieldCounts, res.FieldCount)
+		if res.QuoteAffected {
+			analysis.QuoteAffectedCount++
+		}
+	}
+
+	return analysis
+}
+
+func getDelimiterStatus(analysis DelimiterAnalysis) DelimStatus {
+	squaredDiff := make([]float64, 0, len(analysis.FieldCounts))
+	status := DelimStatus{
+		InvalidRate:       float64(analysis.InvalidCount) / float64(analysis.NumberOfLines),
+		QuoteAffectedRate: float64(analysis.QuoteAffectedCount) / float64(analysis.NumberOfLines),
+		TotalLines:        analysis.NumberOfLines,
+		ValidCount:        analysis.ValidCount,
+	}
+
+	if analysis.ValidCount == 0 {
+		return status
+	}
+
+	maxFieldsNumber, maxFieldsNumberCount := getMode(analysis.FieldCounts)
+
+	status.ModeColumns = maxFieldsNumber
+
+	status.ModeCoverage = float64(maxFieldsNumberCount) / float64(status.ValidCount)
+
+	mean := float64(Sum(analysis.FieldCounts)) / float64(status.ValidCount)
+	for _, count := range analysis.FieldCounts {
+		diff := (float64(count) - mean)
+		squaredDiff = append(squaredDiff, diff*diff)
+	}
+	status.FieldCountStdDev = math.Sqrt(Sum(squaredDiff) / float64(status.ValidCount))
+
+	return status
+}
+
+func meetsConstraints(s DelimStatus) bool {
+	return s.ModeColumns >= 2 && s.ModeCoverage >= 0.80
+}
+
+func computeScore(s DelimStatus, w ScoreWeights) float64 {
+	return w.CoverageWeight*s.ModeCoverage -
+		w.SpreadWeight*s.FieldCountStdDev -
+		w.InvalidWeight*s.InvalidRate +
+		w.QuoteWeight*s.QuoteAffectedRate
+}
+
+func getCSVDelimiter(lines []string, delimiters []rune) {
+	candidates := make([]CandidateResult, 0, len(delimiters))
+	for _, d := range delimiters {
+		analysis := analyzeDelimiter(lines, d)
+		status := getDelimiterStatus(analysis)
+		candidates = append(candidates, CandidateResult{
+			Delimiter: d,
+			Stats:     status,
+			Score:     computeScore(status, DefaultScoreWeights()),
+			Pass:      meetsConstraints(status),
+		})
+
+	}
 }

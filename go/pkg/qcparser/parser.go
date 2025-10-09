@@ -1,9 +1,8 @@
 package qcparser
 
 type Parser struct {
-	opt     DetectOptions
-	file    string
-	helpers Helpers
+	opt  DetectOptions
+	file string
 }
 
 func New(f string, opt *DetectOptions) *Parser {
@@ -25,8 +24,7 @@ func New(f string, opt *DetectOptions) *Parser {
 	}
 	defOpt.AssumeUTF8 = opt.AssumeUTF8
 	return &Parser{
-		opt:     defOpt,
-		file:    f,
-		helpers: *NewHelpers(),
+		opt:  defOpt,
+		file: f,
 	}
 }

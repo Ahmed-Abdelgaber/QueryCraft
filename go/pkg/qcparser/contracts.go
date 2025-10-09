@@ -6,7 +6,7 @@ type DetectOptions struct {
 	FieldCount      int      `json:"field_count"`
 	SampleBytes     int64    `json:"sample_bytes"`
 	MaxPreviewRows  int      `json:"max_preview_rows"`
-	Delimiters      []string `json:"delimiters"`
+	Delimiters      []rune   `json:"delimiters"`
 	CommentPrefixes []string `json:"comment_prefixes"`
 	AssumeUTF8      bool     `json:"assume_utf8"`
 	MaxLineBytes    int      `json:"max_line_bytes"`
@@ -17,7 +17,7 @@ func DefaultDetectOptions() DetectOptions {
 		HasHeader:       false,
 		SampleBytes:     1 << 20, // 1MB
 		MaxPreviewRows:  50,
-		Delimiters:      []string{"|", ",", "\t", ";"},
+		Delimiters:      []rune{',', '|', '\t', ';'},
 		CommentPrefixes: []string{"#", "//", "--"},
 		AssumeUTF8:      true,
 		MaxLineBytes:    32 << 20, // 32MB guard
@@ -104,4 +104,52 @@ type ErrorResponse struct {
 		Message string      `json:"message"`
 		Details interface{} `json:"details,omitempty"`
 	} `json:"error"`
+}
+
+type LineAnalysis struct {
+	FieldCount    int
+	Invalid       bool
+	QuoteAffected bool
+}
+
+type DelimiterAnalysis struct {
+	NumberOfLines      int
+	ValidCount         int
+	InvalidCount       int
+	FieldCounts        []int
+	QuoteAffectedCount int
+}
+
+type DelimStatus struct {
+	ModeColumns       int
+	ModeCoverage      float64
+	FieldCountStdDev  float64
+	InvalidRate       float64
+	QuoteAffectedRate float64
+
+	TotalLines int
+	ValidCount int
+}
+
+type ScoreWeights struct {
+	CoverageWeight float64
+	SpreadWeight   float64
+	InvalidWeight  float64
+	QuoteWeight    float64
+}
+
+func DefaultScoreWeights() ScoreWeights {
+	return ScoreWeights{
+		CoverageWeight: 0.65,
+		SpreadWeight:   0.20,
+		InvalidWeight:  0.15,
+		QuoteWeight:    0.10,
+	}
+}
+
+type CandidateResult struct {
+	Delimiter rune
+	Stats     DelimStatus
+	Score     float64
+	Pass      bool
 }
