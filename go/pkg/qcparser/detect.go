@@ -4,10 +4,11 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"math"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -35,19 +36,18 @@ func (p *Parser) Detect() (DetectResponse, error) {
 
 	format, _ := dataFormat(lines, p.opt.MaxPreviewRows)
 	switch format {
-	case "json":
-	case "jsonl":
+	case "json", "jsonl":
 		return DetectResponse{
 			Format:     format,
 			Encoding:   "utf-8",
 			DurationMs: DurationMs(start),
 		}, nil
 	case "csv":
-		delimiter := detectCSVDelimiters(lines, p.opt.Delimiters, p.opt.MaxPreviewRows)
+		delimiters := getCSVDelimiter(lines, p.opt.Delimiters)
 		return DetectResponse{
 			Format:     format,
 			Encoding:   "utf-8",
-			Delimiter:  delimiter,
+			Delimiter:  delimiters,
 			DurationMs: DurationMs(start),
 		}, nil
 	}
@@ -60,7 +60,7 @@ func getLines(r io.Reader, maxBytes int64, maxLine int) ([]string, int64, error)
 	var lines []string
 	var total int64
 	for {
-		if maxBytes > 0 && total >= maxBytes || maxLine > 0 && len(lines) > maxLine {
+		if (maxBytes > 0 && total >= maxBytes) || (maxLine > 0 && len(lines) >= maxLine) {
 			break
 		}
 		line, size, err := readLine(reader)
@@ -98,7 +98,7 @@ func readLine(reader *bufio.Reader) (string, int64, error) {
 		buff = append(buff, frag...)
 	}
 
-	return string(buff), int64(len(line)), nil
+	return string(buff), int64(len(buff)), nil
 }
 
 func isUTF8(lines []string) bool {
@@ -154,47 +154,6 @@ func dataFormat(lines []string, maxCheckNumber int) (string, int) {
 		}
 	}
 	return "csv", 0
-}
-
-func detectCSVDelimiters(lines []string, delimiters []string, maxCheckNumber int) []string {
-	scannedLines := 0
-	stopAfter := maxCheckNumber
-	delimiter := make(map[string]int)
-	newDelimitersThisLine := false
-	maxLines := len(lines)
-	foundDelimiters := make([]string, 0, len(delimiters))
-	for _, l := range lines {
-		if isComment(l) {
-			continue
-		}
-		scannedLines++
-		if scannedLines > stopAfter || scannedLines > maxLines {
-			break
-		}
-		for _, d := range delimiters {
-			count := strings.Count(l, d)
-			if count > 0 && delimiter[d] == 0 {
-				newDelimitersThisLine = true
-			}
-			delimiter[d] += count
-		}
-		if newDelimitersThisLine {
-			stopAfter += maxCheckNumber
-		}
-		newDelimitersThisLine = false
-	}
-
-	for _, k := range delimiters {
-		fmt.Println(k, delimiter[k])
-
-		if delimiter[k] > 0 {
-			foundDelimiters = append(foundDelimiters, k)
-		}
-	}
-
-	fmt.Println("Delimiter counts:", foundDelimiters)
-
-	return foundDelimiters
 }
 
 func analyzeLine(line string, delimiter rune) LineAnalysis {
@@ -262,6 +221,9 @@ func analyzeDelimiter(lines []string, delimiter rune) DelimiterAnalysis {
 	}
 
 	for _, line := range lines {
+		if isComment(line) {
+			continue
+		}
 		res := analyzeLine(line, delimiter)
 
 		if res.Invalid {
@@ -319,17 +281,280 @@ func computeScore(s DelimStatus, w ScoreWeights) float64 {
 		w.QuoteWeight*s.QuoteAffectedRate
 }
 
-func getCSVDelimiter(lines []string, delimiters []rune) {
+func compare(a, b CandidateResult) bool {
+	if a.Score != b.Score {
+		return a.Score > b.Score
+	}
+
+	if a.Status.ModeColumns != b.Status.ModeColumns {
+		return a.Status.ModeColumns > b.Status.ModeColumns
+	}
+	return a.Status.ModeCoverage > b.Status.ModeCoverage
+}
+
+func getWinners(candidates []CandidateResult) Decision {
+	passed := make([]CandidateResult, 0, len(candidates))
+
+	for _, c := range candidates {
+		if c.Pass {
+			passed = append(passed, c)
+		}
+	}
+
+	decision := Decision{
+		EligibleCount:  len(passed),
+		CandidateCount: len(candidates),
+	}
+
+	if len(passed) >= 1 {
+		sort.Slice(passed, func(i, j int) bool { return compare(passed[i], passed[j]) })
+		decision.Winner = passed[0]
+		if len(passed) >= 2 {
+			decision.RunnerUp = passed[1]
+			decision.AmbiguityEpsilon = math.Abs(decision.Winner.Score - decision.RunnerUp.Score)
+			decision.IsAmbiguous = decision.AmbiguityEpsilon < 0.05
+		}
+		return decision
+	}
+
+	sort.Slice(candidates, func(i, j int) bool { return compare(candidates[i], candidates[j]) })
+	decision.Winner = candidates[0]
+	if len(candidates) >= 2 {
+		decision.RunnerUp = candidates[1]
+		decision.AmbiguityEpsilon = math.Abs(decision.Winner.Score - decision.RunnerUp.Score)
+		decision.IsAmbiguous = true
+	}
+	return decision
+}
+
+func getCSVDelimiter(lines []string, delimiters []rune) []CandidateResult {
 	candidates := make([]CandidateResult, 0, len(delimiters))
 	for _, d := range delimiters {
 		analysis := analyzeDelimiter(lines, d)
 		status := getDelimiterStatus(analysis)
 		candidates = append(candidates, CandidateResult{
 			Delimiter: d,
-			Stats:     status,
+			Status:    status,
 			Score:     computeScore(status, DefaultScoreWeights()),
 			Pass:      meetsConstraints(status),
 		})
-
 	}
+
+	winners := getWinners(candidates)
+
+	return []CandidateResult{winners.Winner, winners.RunnerUp}
+}
+
+func splitLineFields(line string, delim rune) (fields []string, invalid bool) {
+	const dq = '"'
+	inQuotes := false
+	var buf []rune
+
+	runes := []rune(line)
+	for i := 0; i < len(runes); i++ {
+		ch := runes[i]
+
+		if ch == '\r' {
+			continue
+		}
+
+		if ch == dq {
+
+			if inQuotes && i+1 < len(runes) && runes[i+1] == dq {
+				buf = append(buf, dq)
+				i++
+			} else {
+				inQuotes = !inQuotes
+			}
+			continue
+		}
+
+		if ch == delim {
+			if inQuotes {
+
+				buf = append(buf, ch)
+			} else {
+
+				fields = append(fields, string(buf))
+				buf = buf[:0]
+			}
+			continue
+		}
+
+		buf = append(buf, ch)
+	}
+
+	fields = append(fields, string(buf))
+
+	invalid = inQuotes
+	return fields, invalid
+}
+
+type InferredKind int
+
+const (
+	KindEmpty InferredKind = iota
+	KindBool
+	KindInt
+	KindFloat
+	KindDate
+	KindText
+)
+
+type CellInference struct {
+	Kind       InferredKind
+	Confidence float64 // 0..1
+}
+
+func inferCellType(s string) CellInference {
+	t := strings.TrimSpace(s)
+	if t == "" || isNullToken(t) {
+		return CellInference{Kind: KindEmpty, Confidence: 1.0}
+	}
+
+	if isBoolToken(t) {
+
+		if eqFold(t, "true") || eqFold(t, "false") {
+			return CellInference{Kind: KindBool, Confidence: 0.95}
+		}
+		return CellInference{Kind: KindBool, Confidence: 0.90}
+	}
+
+	if ok := parseIntRelaxed(t); ok {
+		return CellInference{Kind: KindInt, Confidence: 0.98}
+	}
+
+	if ok := parseFloatRelaxed(t); ok {
+		return CellInference{Kind: KindFloat, Confidence: 0.93}
+	}
+
+	if ok := parseDateAny(t); ok {
+		return CellInference{Kind: KindDate, Confidence: 0.92}
+	}
+
+	return CellInference{Kind: KindText, Confidence: 0.60}
+}
+
+func isNullToken(t string) bool {
+	switch strings.ToLower(t) {
+	case "null", "nil", "na", "n/a", "none", "-":
+		return true
+	default:
+		return false
+	}
+}
+
+func isBoolToken(t string) bool {
+	switch strings.ToLower(t) {
+	case "true", "false", "yes", "no", "y", "n", "0", "1":
+		return true
+	default:
+		return false
+	}
+}
+
+func eqFold(a, b string) bool { return strings.EqualFold(a, b) }
+
+func parseIntRelaxed(t string) bool {
+
+	clean := removeThousands(t)
+
+	if strings.ContainsAny(clean, ".eE") {
+		return false
+	}
+	_, err := strconv.ParseInt(clean, 10, 64)
+	return err == nil
+}
+
+func parseFloatRelaxed(t string) bool {
+	clean := removeThousands(t)
+
+	_, err := strconv.ParseFloat(clean, 64)
+	return err == nil
+}
+
+func removeThousands(s string) string {
+
+	r := strings.NewReplacer(",", "", "_", "", " ", "")
+	return r.Replace(s)
+}
+
+func parseDateAny(t string) bool {
+	layouts := []string{
+		time.RFC3339,
+		"2006-01-02",
+		"2006-01-02 15:04:05",
+		"02/01/2006", "01/02/2006",
+		"02-01-2006", "01-02-2006",
+		"02 Jan 2006", "Jan 02, 2006",
+		"2006/01/02", "2006.01.02",
+	}
+	for _, layout := range layouts {
+		if _, err := time.Parse(layout, t); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
+func getCellsTypes(lines []string, delimiter CandidateResult) []CellInference {
+	candidateCellTypes := make([]CellInference, delimiter.Status.ModeColumns)
+	columns := make([][]string, delimiter.Status.ModeColumns)
+	freq := make(map[InferredKind]int)
+	max := 0
+	for _, line := range lines {
+		if isComment(line) {
+			continue
+		}
+		fields, invalid := splitLineFields(line, delimiter.Delimiter)
+		if invalid || len(fields) != delimiter.Status.ModeColumns {
+			continue
+		}
+		for i, field := range fields {
+			columns[i] = append(columns[i], field)
+		}
+	}
+
+	for i, column := range columns {
+		for _, cell := range column {
+			cellType := inferCellType(cell)
+			if cellType.Kind == KindEmpty {
+				continue
+			}
+			freq[cellType.Kind]++
+			if freq[cellType.Kind] > max {
+				max = freq[cellType.Kind]
+				candidateCellTypes[i] = cellType
+			}
+		}
+		freq = map[InferredKind]int{}
+		max = 0
+	}
+
+	return candidateCellTypes
+}
+
+func hasHeaders(lines []string, delimiter CandidateResult, cellTypes []CellInference) (bool, []string) {
+	candidateHeader := make([]string, 0, delimiter.Status.ModeColumns)
+	for _, line := range lines {
+		if isComment(line) {
+			continue
+		}
+		fields, invalid := splitLineFields(line, delimiter.Delimiter)
+		if invalid || len(fields) != delimiter.Status.ModeColumns {
+			continue
+		}
+
+		candidateHeader = fields
+		break
+	}
+
+	for i, cell := range candidateHeader {
+		cellType := inferCellType(cell)
+		if cellType.Kind != cellTypes[i].Kind {
+			return false, nil
+		}
+	}
+
+	return true, candidateHeader
 }

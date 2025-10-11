@@ -84,18 +84,18 @@ type SampledMeta struct {
 }
 
 type DetectResponse struct {
-	Format     string      `json:"format"` // csv | jsonl | json
-	Encoding   string      `json:"encoding"`
-	Delimiter  []string    `json:"delimiter,omitempty"`
-	Comment    *string     `json:"comment,omitempty"`
-	FieldCount int         `json:"field_count"`
-	TrimFields bool        `json:"trim_fields"`
-	Columns    []Column    `json:"columns"`
-	Preview    Preview     `json:"preview"`
-	Confidence float64     `json:"confidence"`
-	Issues     []Issue     `json:"issues"`
-	Sampled    SampledMeta `json:"sampled"`
-	DurationMs int64       `json:"duration_ms"`
+	Format     string            `json:"format"` // csv | jsonl | json
+	Encoding   string            `json:"encoding"`
+	Delimiter  []CandidateResult `json:"delimiter,omitempty"`
+	Comment    *string           `json:"comment,omitempty"`
+	FieldCount int               `json:"field_count"`
+	TrimFields bool              `json:"trim_fields"`
+	Columns    []Column          `json:"columns"`
+	Preview    Preview           `json:"preview"`
+	Confidence float64           `json:"confidence"`
+	Issues     []Issue           `json:"issues"`
+	Sampled    SampledMeta       `json:"sampled"`
+	DurationMs int64             `json:"duration_ms"`
 }
 
 type ErrorResponse struct {
@@ -149,7 +149,16 @@ func DefaultScoreWeights() ScoreWeights {
 
 type CandidateResult struct {
 	Delimiter rune
-	Stats     DelimStatus
+	Status    DelimStatus
 	Score     float64
 	Pass      bool
+}
+
+type Decision struct {
+	Winner           CandidateResult
+	RunnerUp         CandidateResult
+	IsAmbiguous      bool
+	AmbiguityEpsilon float64
+	EligibleCount    int
+	CandidateCount   int
 }
