@@ -133,7 +133,7 @@ func getCellsTypes(lines []string, delimiter CandidateResult) []CellInference {
 		if util.IsComment(line) {
 			continue
 		}
-		fields, invalid := splitLineFields(line, delimiter.Delimiter)
+		fields, invalid := SplitLineFields(line, delimiter.Delimiter)
 		if invalid || len(fields) != delimiter.Status.ModeColumns {
 			continue
 		}
@@ -169,7 +169,7 @@ func hasHeaders(lines []string, delimiter CandidateResult, cellTypes []CellInfer
 		if util.IsComment(line) {
 			continue
 		}
-		fields, invalid := splitLineFields(line, delimiter.Delimiter)
+		fields, invalid := SplitLineFields(line, delimiter.Delimiter)
 		if invalid || len(fields) != delimiter.Status.ModeColumns {
 			continue
 		}

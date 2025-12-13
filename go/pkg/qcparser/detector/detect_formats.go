@@ -110,6 +110,7 @@ func detectCSV(lines []string, bytesRead int64, opts *types.Options, start time.
 		Encoding:   "utf-8",
 		Delimiter:  delimiterInfo,
 		Comment:    commentPrefix,
+		HasHeader:  hasHeader,
 		FieldCount: winner.Status.ModeColumns,
 		TrimFields: true,
 		Columns:    columns,
