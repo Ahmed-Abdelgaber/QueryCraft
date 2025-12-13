@@ -1,15 +1,28 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
-	"querycraft/pkg/qcparser"
+	"log"
+	"querycraft/pkg/qcparser/detector"
+	"querycraft/pkg/qcparser/types"
 )
 
 func main() {
-	opt := qcparser.DefaultDetectOptions()
-	parser := qcparser.New("../../data/space_missions.log", &opt)
+	// Use new types package
+	opts := types.DefaultOptions()
 
-	res, _ := parser.Detect()
+	// Call detector.Detect() directly
+	res, err := detector.Detect("../../data/space_missions.log", &opts)
+	if err != nil {
+		log.Fatalf("Detection failed: %v", err)
+	}
 
-	fmt.Println(res)
+	// Pretty print the detection result as JSON
+	resJSON, err := json.MarshalIndent(res, "", "  ")
+	if err != nil {
+		log.Fatalf("Failed to marshal JSON: %v", err)
+	}
+
+	fmt.Println(string(resJSON))
 }
