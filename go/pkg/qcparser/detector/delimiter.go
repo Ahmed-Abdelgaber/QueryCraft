@@ -204,7 +204,7 @@ func getCSVDelimiter(lines []string, delimiters []rune) []CandidateResult {
 }
 
 // splitLineFields parses a CSV line into fields
-func splitLineFields(line string, delim rune) (fields []string, invalid bool) {
+func SplitLineFields(line string, delim rune) (fields []string, invalid bool) {
 	const dq = '"'
 	inQuotes := false
 	var current strings.Builder

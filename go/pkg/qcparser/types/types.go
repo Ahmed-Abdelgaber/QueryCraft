@@ -6,6 +6,7 @@ type DetectResponse struct {
 	Encoding   string         `json:"encoding"`
 	Delimiter  *DelimiterInfo `json:"delimiter,omitempty"`
 	Comment    *string        `json:"comment,omitempty"`
+	HasHeader  bool           `json:"has_header"`
 	FieldCount int            `json:"field_count"`
 	TrimFields bool           `json:"trim_fields"`
 	Columns    []Column       `json:"columns"`

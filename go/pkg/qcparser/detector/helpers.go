@@ -58,7 +58,7 @@ func generatePreview(lines []string, delimiter CandidateResult, columns []types.
 			continue
 		}
 
-		fields, invalid := splitLineFields(line, delimiter.Delimiter)
+		fields, invalid := SplitLineFields(line, delimiter.Delimiter)
 
 		// Skip invalid rows or rows with wrong field count
 		if invalid || len(fields) != delimiter.Status.ModeColumns {

@@ -1,28 +1,28 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"querycraft/pkg/qcparser/detector"
+	"querycraft/pkg/qcparser"
 	"querycraft/pkg/qcparser/types"
 )
 
 func main() {
-	// Use new types package
+	// Test Convert - full pipeline
 	opts := types.DefaultOptions()
 
-	// Call detector.Detect() directly
-	res, err := detector.Detect("../../data/space_missions.log", &opts)
+	fmt.Println("Converting space_missions.log to DJSON...")
+	result, err := qcparser.Convert(
+		"../../data/space_missions.log",
+		"../../data/space_missions.djson",
+		&opts,
+	)
 	if err != nil {
-		log.Fatalf("Detection failed: %v", err)
+		log.Fatalf("Conversion failed: %v", err)
 	}
 
-	// Pretty print the detection result as JSON
-	resJSON, err := json.MarshalIndent(res, "", "  ")
-	if err != nil {
-		log.Fatalf("Failed to marshal JSON: %v", err)
-	}
-
-	fmt.Println(string(resJSON))
+	fmt.Printf("\n✅ Successfully created DJSON file: %s\n", result.DJSONPath)
+	fmt.Printf("📊 Rows written: %d\n", result.RowsWritten)
+	fmt.Printf("💾 Bytes written: %d\n", result.BytesWritten)
+	fmt.Printf("⏱️  Duration: %dms\n", result.DurationMs)
 }
