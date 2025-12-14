@@ -1,0 +1,32 @@
+{
+    "name": "@querycraft/bridge",
+    "version": "1.0.0",
+    "description": "Node.js bridge to QueryCraft Go CLI",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "test": "node --test",
+        "dev": "tsc --watch"
+    },
+    "keywords": [
+        "querycraft",
+        "parser",
+        "csv",
+        "json"
+    ],
+    "author": "",
+    "license": "MIT",
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "typescript": "^5.0.0"
+    },
+    "files": [
+        "dist",
+        "bin"
+    ],
+    "dependencies": {
+        "@duckdb/duckdb-wasm": "^1.30.0",
+        "duckdb": "^1.4.3"
+    }
+}

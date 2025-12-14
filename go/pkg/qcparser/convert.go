@@ -6,6 +6,7 @@ import (
 	"querycraft/pkg/qcparser/internal/reader"
 	"querycraft/pkg/qcparser/internal/writer"
 	"querycraft/pkg/qcparser/types"
+	"sync"
 )
 
 // Convert detects file format and converts it to DJSON for DuckDB
@@ -19,11 +20,14 @@ func Convert(filePath string, outputPath string, opts *types.Options) (*types.Co
 	// Step 2: Read file (returns channels for streaming)
 	rowChan, errChan := reader.Read(filePath, detected)
 
-	// Consume error channel concurrently to prevent deadlock
+	// Collect errors silently using WaitGroup
+	errors := make([]string, 0)
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		for readerErr := range errChan {
-			// For now, just log errors (could collect them in result)
-			fmt.Printf("Reader warning: %v\n", readerErr)
+			errors = append(errors, readerErr.Error())
 		}
 	}()
 
@@ -32,6 +36,12 @@ func Convert(filePath string, outputPath string, opts *types.Options) (*types.Co
 	if err != nil {
 		return nil, fmt.Errorf("write failed: %w", err)
 	}
+
+	// Wait for error collection to complete
+	wg.Wait()
+
+	// Add collected errors to result
+	result.Errors = errors
 
 	return result, nil
 }
