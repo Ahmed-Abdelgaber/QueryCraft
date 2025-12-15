@@ -1,0 +1,52 @@
+/* Select Component Styles */
+.select-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.select-wrapper--full-width {
+    width: 100%;
+}
+
+.select-label {
+    color: var(--text-secondary, #9ca3af);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.select {
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+    border-radius: 8px;
+    background: var(--surface-secondary, rgba(30, 30, 45, 0.5));
+    color: var(--text-primary, #e5e7eb);
+    font-size: 0.9375rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.select:hover {
+    border-color: var(--border-emphasis, rgba(255, 255, 255, 0.12));
+}
+
+.select:focus {
+    outline: none;
+    border-color: var(--accent, #6366f1);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.select--error {
+    border-color: #ef4444;
+}
+
+.select-error {
+    color: #ef4444;
+    font-size: 0.8125rem;
+}

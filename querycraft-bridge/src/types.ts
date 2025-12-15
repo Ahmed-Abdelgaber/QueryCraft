@@ -80,3 +80,19 @@ export interface ConvertOptions {
     onProgress?: (event: ConvertEvent) => void;
     signal?: AbortSignal;
 }
+
+// Database types
+export interface QueryResult {
+    rows: any[];
+    rowCount: number;
+}
+
+export interface ColumnInfo {
+    column_name: string;
+    column_type: string;
+    null: string;
+    key: string | null;
+    default: string | null;
+    extra: string | null;
+}
+
