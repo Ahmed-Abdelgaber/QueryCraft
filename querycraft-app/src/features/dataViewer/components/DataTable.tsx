@@ -134,11 +134,14 @@ export function DataTable({
                     <tbody>
                         {table.getRowModel().rows.map((row) => (
                             <tr key={row.id}>
-                                {row.getVisibleCells().map((cell) => (
-                                    <td key={cell.id}>
-                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                    </td>
-                                ))}
+                                {row.getVisibleCells().map((cell) => {
+                                    const cellValue = cell.getValue() as string;
+                                    return (
+                                        <td key={cell.id} title={cellValue}>
+                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                        </td>
+                                    );
+                                })}
                             </tr>
                         ))}
                     </tbody>

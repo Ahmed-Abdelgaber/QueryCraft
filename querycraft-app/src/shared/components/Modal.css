@@ -16,10 +16,16 @@
 
 /* ==================== Modal Container ==================== */
 .modal {
+    /* Glass Base */
     background: var(--surface-glass-strong);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+
     border: 1px solid var(--border-light);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-xl);
+
+    /* Layout */
     width: 90%;
     max-height: 90vh;
     display: flex;
@@ -49,7 +55,8 @@
     justify-content: space-between;
     padding: var(--space-lg);
     border-bottom: 1px solid var(--border-subtle);
-    background: var(--surface-primary);
+    background: transparent;
+    /* Let glass shine through */
 }
 
 .modal-header h2 {
@@ -93,17 +100,33 @@
     justify-content: flex-end;
     gap: var(--space-md);
     background: var(--surface-panel);
+    /* Subtle contrast */
 }
 
-/* ==================== Dark Theme Support ==================== */
+/* ==================== Dark Theme Specifics ==================== */
 [data-theme="dark"] .modal {
-    background: #1e1e24;
-    /* Solid fallback/base */
+    /* Ensure border visibility in dark mode */
     border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
 
-/* ==================== Light Theme Support ==================== */
+/* ==================== Light Theme Specifics ==================== */
 [data-theme="light"] .modal {
-    background: #ffffff;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    /* Lighter glass for light mode */
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow:
+        0 20px 25px -5px rgba(0, 0, 0, 0.1),
+        0 10px 10px -5px rgba(0, 0, 0, 0.04),
+        0 0 0 1px rgba(0, 0, 0, 0.05);
+    /* Subtle outline */
+}
+
+/* Ensure text legibility in light mode */
+[data-theme="light"] .modal-header h2 {
+    color: #1e293b;
+}
+
+[data-theme="light"] .modal-body {
+    color: #475569;
 }

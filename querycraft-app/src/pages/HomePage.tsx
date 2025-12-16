@@ -15,6 +15,22 @@ import { dummyHistory } from '../data/dummy';
 import { formatDistanceToNow } from 'date-fns';
 import './HomePage.css';
 
+const Code = ({ size }: { size: number }) => (
+    <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+    >
+        <polyline points="16 18 22 12 16 6" />
+        <polyline points="8 6 2 12 8 18" />
+    </svg>
+);
+
 export default function HomePage() {
     const { theme, toggleTheme } = useTheme();
     const {
@@ -68,20 +84,31 @@ export default function HomePage() {
 
     return (
         <div className="home">
-            {/* Header */}
-            <div className="home-header">
+            {/* Premium Header */}
+            <header className="home-header">
                 <div className="home-header-content">
-                    <div>
-                        <h1>QueryCraft</h1>
-                        <p className="home-slogan">Transform unstructured logs into queryable data, instantly.</p>
+                    {/* Logo Section */}
+                    <div className="header-brand">
+                        <div className="brand-logo">
+                            <Code size={24} />
+                        </div>
+                        <div className="brand-text">
+                            <h1>QueryCraft</h1>
+                            <span className="brand-badge">Beta</span>
+                        </div>
                     </div>
-                    <div className="home-header-actions">
-                        <Button variant="ghost" size="sm" onClick={toggleTheme}>
-                            {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+
+                    {/* Navigation (Visual Only) */}
+                    <nav className="header-nav">
+                        <a href="#" className="nav-item">Documentation</a>
+                        <a href="#" className="nav-item">GitHub</a>
+                        <div className="nav-divider"></div>
+                        <Button variant="ghost" size="sm" onClick={toggleTheme} className="theme-toggle">
+                            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
                         </Button>
-                    </div>
+                    </nav>
                 </div>
-            </div>
+            </header>
 
             {/* Main Content */}
             <div className="home-container">
@@ -104,8 +131,13 @@ export default function HomePage() {
                         </Button>
                         {selectedFile && (
                             <div className="file-drop-path">
-                                <strong>{selectedFile.name}</strong>
-                                <span>{selectedFile.path}</span>
+                                <div className="file-drop-path-icon">
+                                    <FileText size={24} />
+                                </div>
+                                <div className="file-drop-path-info">
+                                    <strong>{selectedFile.name}</strong>
+                                    <span>{selectedFile.path}</span>
+                                </div>
                             </div>
                         )}
                     </div>

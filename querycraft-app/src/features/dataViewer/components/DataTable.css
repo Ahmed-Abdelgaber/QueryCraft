@@ -27,35 +27,42 @@
 }
 
 .data-table th {
-    padding: 1rem;
+    padding: 1rem 1.25rem;
     text-align: left;
     font-weight: 600;
-    color: var(--text-primary, #e5e7eb);
-    border-bottom: 2px solid var(--accent, #6366f1);
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--accent);
     white-space: nowrap;
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     user-select: none;
+    position: relative;
+    background: var(--surface-primary);
+    /* Ensure opaque background for sticky */
+    transition: background-color 0.2s ease;
 }
 
 .data-table th.sortable {
     cursor: pointer;
-    transition: background-color 0.2s ease;
 }
 
 .data-table th.sortable:hover {
-    background: rgba(99, 102, 241, 0.15);
+    background: var(--surface-secondary);
 }
 
 .data-table th .th-content {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    height: 100%;
 }
 
 .data-table th .sort-indicator {
-    color: var(--accent, #6366f1);
+    color: var(--accent);
     font-size: 0.875rem;
     opacity: 0.6;
+    transition: opacity 0.2s ease;
 }
 
 .data-table th.sortable:hover .sort-indicator {
@@ -63,14 +70,34 @@
 }
 
 .data-table td {
-    padding: 0.875rem 1rem;
-    border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
-    color: var(--text-secondary, #9ca3af);
-    font-size: 0.875rem;
+    padding: 0.875rem 1.25rem;
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    font-size: 0.9375rem;
+    /* Slightly larger for readability */
+
+    /* Text Truncation */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 300px;
+    /* Prevent massive columns */
+}
+
+/* Zebra Striping (Optional, but good for data) */
+.data-table tbody tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.01);
 }
 
 .data-table tbody tr:hover {
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--surface-glass-hover);
+    /* Glass hover effect */
+    transition: background-color 0.15s ease;
+}
+
+.data-table tbody tr:hover td {
+    color: var(--text-primary);
+    /* Highlight text on hover */
 }
 
 .data-table tbody tr:last-child td {
