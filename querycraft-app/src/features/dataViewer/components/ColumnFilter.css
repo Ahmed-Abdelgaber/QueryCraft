@@ -35,17 +35,23 @@
 .filter-dropdown {
     position: absolute;
     top: calc(100% + 0.5rem);
-    left: 0;
-    z-index: 1000;
+    right: 0;
+    /* Align to right for better visibility near edges */
+    left: auto;
+    z-index: 9999;
+    /* Ensure it stays on top */
     width: 280px;
     max-height: 400px;
-    background: var(--surface-primary, rgba(20, 20, 30, 0.95));
-    border: 1px solid var(--border-emphasis, rgba(255, 255, 255, 0.12));
-    border-radius: var(--radius-md, 8px);
-    box-shadow: var(--shadow-lg, 0 12px 40px rgba(0, 0, 0, 0.4));
+    background: var(--surface-glass-strong);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg), 0 0 0 1px var(--border-subtle);
     display: flex;
     flex-direction: column;
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    animation: scaleIn var(--duration-fast) var(--ease-spring) forwards;
+    transform-origin: top right;
 }
 
 /* Header */

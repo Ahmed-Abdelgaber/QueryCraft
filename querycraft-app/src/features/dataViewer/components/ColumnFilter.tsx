@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Filter, X } from 'lucide-react';
 import './ColumnFilter.css';
 
@@ -15,22 +16,6 @@ export function ColumnFilter({ columnName, uniqueValues, onFilterChange, activeF
     const [searchTerm, setSearchTerm] = useState('');
     const dropdownRef = useRef<HTMLDivElement>(null);
 
-    // Close dropdown when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-            }
-        };
-
-        if (isOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
-        }
-
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [isOpen]);
 
     const filteredValues = uniqueValues.filter(value =>
         String(value).toLowerCase().includes(searchTerm.toLowerCase())
@@ -67,6 +52,68 @@ export function ColumnFilter({ columnName, uniqueValues, onFilterChange, activeF
 
     const hasActiveFilter = activeFilters.length > 0 && activeFilters.length < uniqueValues.length;
 
+    // Portal implementation
+    const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+    const portalRef = useRef<HTMLDivElement>(null); // Ref for the portal content
+
+    useEffect(() => {
+        if (isOpen && dropdownRef.current) {
+            const updatePosition = () => {
+                if (!dropdownRef.current) return;
+                const rect = dropdownRef.current.getBoundingClientRect();
+                const viewportHeight = window.innerHeight;
+                // const viewportWidth = window.innerWidth;
+                const dropdownHeight = 400; // Max height
+                const dropdownWidth = 280;
+
+                let top = rect.bottom + window.scrollY + 8;
+                let left = rect.right + window.scrollX - dropdownWidth;
+
+                // Check if it goes off screen bottom
+                if (rect.bottom + dropdownHeight > viewportHeight) {
+                    top = rect.top + window.scrollY - dropdownHeight - 8; // Flip up
+                }
+
+                // Check if it goes off screen left
+                if (left < 0) {
+                    left = rect.left + window.scrollX; // Align left
+                }
+
+                setDropdownPosition({ top, left });
+            };
+
+            updatePosition();
+            window.addEventListener('scroll', updatePosition, true);
+            window.addEventListener('resize', updatePosition);
+
+            return () => {
+                window.removeEventListener('scroll', updatePosition, true);
+                window.removeEventListener('resize', updatePosition);
+            };
+        }
+    }, [isOpen]);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            // Check both the trigger button (dropdownRef) and the portal content (portalRef)
+            const clickedInsideTrigger = dropdownRef.current?.contains(event.target as Node);
+            const clickedInsidePortal = portalRef.current?.contains(event.target as Node);
+
+            if (!clickedInsideTrigger && !clickedInsidePortal) {
+                setIsOpen(false);
+            }
+        };
+
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isOpen]);
+
     return (
         <div className="column-filter" ref={dropdownRef}>
             <button
@@ -77,8 +124,19 @@ export function ColumnFilter({ columnName, uniqueValues, onFilterChange, activeF
                 <Filter size={14} />
             </button>
 
-            {isOpen && (
-                <div className="filter-dropdown">
+            {isOpen && createPortal(
+                <div
+                    ref={portalRef}
+                    className="filter-dropdown"
+                    style={{
+                        position: 'absolute',
+                        top: dropdownPosition.top,
+                        left: dropdownPosition.left,
+                        margin: 0,
+                        zIndex: 9999
+                    }}
+                    onClick={(e) => e.stopPropagation()} // Prevent bubbling issues
+                >
                     <div className="filter-dropdown-header">
                         <input
                             type="text"
@@ -86,6 +144,7 @@ export function ColumnFilter({ columnName, uniqueValues, onFilterChange, activeF
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="filter-search"
+                            autoFocus
                         />
                     </div>
 
@@ -124,7 +183,8 @@ export function ColumnFilter({ columnName, uniqueValues, onFilterChange, activeF
                             Apply Filter
                         </button>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

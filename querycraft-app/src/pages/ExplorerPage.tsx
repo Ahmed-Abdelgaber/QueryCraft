@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
 import type { SortingState } from '@tanstack/react-table';
 import { Button } from '../shared/components/Button';
 import { useDataLoader, DataTable } from '../features/dataViewer';
@@ -164,28 +163,28 @@ export default function ExplorerPage() {
             <div className="explorer-header">
                 <div className="explorer-header-content">
                     <div className="explorer-header-left">
-                        <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
-                            <ArrowLeft size={20} />
-                            Back to Home
-                        </Button>
-                        <div className="explorer-header-info">
-                            <h1>{fileName || 'Data Explorer'}</h1>
-                            {!isLoading && !error && data.length > 0 && (
-                                <p className="explorer-meta">
-                                    {totalRows.toLocaleString()} total rows • {Object.keys(data[0]).length} columns
-                                </p>
-                            )}
-                        </div>
+                        <nav className="explorer-breadcrumbs" aria-label="Breadcrumb">
+                            <ol>
+                                <li>
+                                    <button onClick={() => navigate('/')} className="breadcrumb-item">
+                                        Home
+                                    </button>
+                                </li>
+                                <li className="breadcrumb-separator">/</li>
+                                <li className="breadcrumb-current" aria-current="page">
+                                    {fileName || 'Data Explorer'}
+                                </li>
+                            </ol>
+                        </nav>
+
+                        {!isLoading && !error && data.length > 0 && (
+                            <div className="explorer-stats-badge">
+                                <span>{totalRows.toLocaleString()} rows</span>
+                                <span className="separator">•</span>
+                                <span>{Object.keys(data[0]).length} columns</span>
+                            </div>
+                        )}
                     </div>
-                    {/* Temporarily disabled - SearchBar */}
-                    {/* {!isLoading && !error && data.length > 0 && (
-                        <div className="explorer-header-right">
-                            <SearchBar 
-                                onSearch={handleSearch}
-                                placeholder="Search across all columns..."
-                            />
-                        </div>
-                    )} */}
                 </div>
             </div>
 

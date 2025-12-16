@@ -1,75 +1,55 @@
-/* Modal Component Styles */
+/* ==================== Modal Overlay ==================== */
 .modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
-    animation: fadeIn 0.2s ease;
+    animation: fadeIn var(--duration-fast) ease-out;
 }
 
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
-}
-
+/* ==================== Modal Container ==================== */
 .modal {
-    background: var(--surface-primary);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-lg);
+    background: var(--surface-glass-strong);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    width: 90%;
     max-height: 90vh;
     display: flex;
     flex-direction: column;
-    animation: slideUp 0.3s ease;
+    animation: scaleIn var(--duration-normal) var(--ease-spring);
+    overflow: hidden;
+    position: relative;
 }
 
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Sizes */
+/* ==================== Sizes ==================== */
 .modal--sm {
-    width: 400px;
-    max-width: 90vw;
+    max-width: 400px;
 }
 
 .modal--md {
-    width: 600px;
-    max-width: 90vw;
+    max-width: 600px;
 }
 
 .modal--lg {
-    width: 800px;
-    max-width: 95vw;
+    max-width: 800px;
 }
 
-/* Header */
+/* ==================== Header ==================== */
 .modal-header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
     padding: var(--space-lg);
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--surface-primary);
 }
 
 .modal-header h2 {
@@ -80,13 +60,12 @@
 }
 
 .modal-close {
-    width: 32px;
-    height: 32px;
-    border: none;
     background: transparent;
-    color: var(--text-secondary);
-    border-radius: var(--radius-md);
+    border: none;
+    color: var(--text-tertiary);
     cursor: pointer;
+    padding: var(--space-xs);
+    border-radius: var(--radius-sm);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -94,35 +73,37 @@
 }
 
 .modal-close:hover {
-    background: var(--surface-secondary);
+    background: var(--surface-glass-hover);
     color: var(--text-primary);
 }
 
-/* Body */
+/* ==================== Body ==================== */
 .modal-body {
     padding: var(--space-lg);
     overflow-y: auto;
     flex: 1;
+    color: var(--text-secondary);
 }
 
-/* Footer */
+/* ==================== Footer ==================== */
 .modal-footer {
     padding: var(--space-lg);
-    border-top: 1px solid var(--border-color);
+    border-top: 1px solid var(--border-subtle);
     display: flex;
     justify-content: flex-end;
     gap: var(--space-md);
+    background: var(--surface-panel);
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-    .modal {
-        max-height: 95vh;
-    }
+/* ==================== Dark Theme Support ==================== */
+[data-theme="dark"] .modal {
+    background: #1e1e24;
+    /* Solid fallback/base */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
 
-    .modal--sm,
-    .modal--md,
-    .modal--lg {
-        width: 95vw;
-    }
+/* ==================== Light Theme Support ==================== */
+[data-theme="light"] .modal {
+    background: #ffffff;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }

@@ -1,211 +1,176 @@
-import { useState, useRef } from 'react';
-import { Upload, FileText, Clock, X, Settings2, Moon, Sun, File, Database } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { Upload, FileText, Clock, X, Settings2, Moon, Sun, File, Database, CheckCircle, AlertCircle } from 'lucide-react';
 import './FilePicker.css';
 
 interface FilePickerProps {
     onFileSelected: () => void;
+    onFilesDropped?: (files: File[]) => void;
     loading: boolean;
 }
 
-// Dummy data for recent files (TODO: Replace with real data from persistence)
+// Dummy data for recent files
 const DUMMY_RECENT_FILES = [
     { name: 'space_missions.log', path: '/data/space_missions.log', size: '2.4 MB', lastOpened: '2 hours ago' },
     { name: 'server_logs.csv', path: '/logs/server_logs.csv', size: '1.1 MB', lastOpened: 'Yesterday' },
     { name: 'analytics_data.json', path: '/exports/analytics_data.json', size: '856 KB', lastOpened: '3 days ago' },
-    { name: 'access_logs.txt', path: '/var/log/access_logs.txt', size: '3.2 MB', lastOpened: 'Last week' },
 ];
 
-export default function FilePicker({ onFileSelected, loading }: FilePickerProps) {
-    const [isDragging, setIsDragging] = useState(false);
+export default function FilePicker({ onFileSelected, onFilesDropped, loading }: FilePickerProps) {
     const [viewMode, setViewMode] = useState<'simple' | 'advanced'>('simple');
+    // Theme state is now managed globally by CSS variables, but we keep this for the toggle button UI logic if needed
+    // or we can remove the toggle if the app has a global theme context. For now, we simulate the toggle.
     const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-    const dragCounter = useRef(0);
 
-    // Drag and drop handlers
-    const handleDragEnter = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        dragCounter.current++;
-        if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
-            setIsDragging(true);
+    const onDrop = useCallback((acceptedFiles: File[]) => {
+        if (acceptedFiles.length > 0) {
+            console.log('Files dropped:', acceptedFiles);
+            if (onFilesDropped) {
+                onFilesDropped(acceptedFiles);
+            }
         }
-    };
+    }, [onFilesDropped]);
 
-    const handleDragLeave = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        dragCounter.current--;
-        if (dragCounter.current === 0) {
-            setIsDragging(false);
+    const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
+        onDrop,
+        noClick: true, // We use the custom button for clicking
+        multiple: false,
+        accept: {
+            'text/csv': ['.csv'],
+            'application/json': ['.json', '.jsonl'],
+            'text/plain': ['.txt', '.log'],
         }
-    };
+    });
 
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-    };
-
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragging(false);
-        dragCounter.current = 0;
-
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            // TODO: Handle dropped file - need to pass file object to backend
-            // For now, call onFileSelected to trigger the file picker as fallback
-            console.log('File dropped:', e.dataTransfer.files[0]);
-            // NOTE: Don't call onFileSelected here - it opens file picker dialog
-            // We need proper file handling integration
-        }
-    };
-
-    const handleRecentFileClick = (filePath: string) => {
-        // TODO: Load recent file by path
-        console.log('Loading recent file:', filePath);
-        onFileSelected();
+    const toggleTheme = () => {
+        const newTheme = theme === 'light' ? 'dark' : 'light';
+        setTheme(newTheme);
+        document.documentElement.setAttribute('data-theme', newTheme);
     };
 
     return (
-        <div className={`file-picker-container theme-${theme}`}>
-            {/* Theme & Mode Controls */}
-            <div className="controls-bar">
+        <div className="file-picker-container animate-fade-in">
+            {/* Header Controls */}
+            <div className="controls-bar glass-panel">
                 <div className="mode-toggle">
                     <button
-                        className={viewMode === 'simple' ? 'active' : ''}
+                        className={`toggle-btn ${viewMode === 'simple' ? 'active' : ''}`}
                         onClick={() => setViewMode('simple')}
                     >
                         Simple
                     </button>
                     <button
-                        className={viewMode === 'advanced' ? 'active' : ''}
+                        className={`toggle-btn ${viewMode === 'advanced' ? 'active' : ''}`}
                         onClick={() => setViewMode('advanced')}
                     >
-                        <Settings2 size={16} />
+                        <Settings2 size={14} />
                         Advanced
                     </button>
                 </div>
 
                 <button
-                    className="theme-toggle"
-                    onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-                    title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+                    className="theme-toggle-btn"
+                    onClick={toggleTheme}
+                    title="Toggle Theme"
                 >
-                    {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+                    {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
                 </button>
             </div>
 
             <div className="file-picker-content">
-                {/* Main Drop Zone */}
+                {/* Drop Zone */}
                 <div
-                    className={`drop-zone ${isDragging ? 'dragging' : ''} ${loading ? 'loading' : ''}`}
-                    onDragEnter={handleDragEnter}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
+                    {...getRootProps()}
+                    className={`drop-zone glass-panel ${isDragActive ? 'active' : ''} ${isDragReject ? 'reject' : ''} ${loading ? 'loading' : ''}`}
                 >
-                    <div className="drop-zone-icon">
-                        {loading ? <Database size={64} className="spin" /> : isDragging ? <Upload size={64} /> : <FileText size={64} />}
-                    </div>
-                    <h2>
-                        {loading ? 'Analyzing File...' : isDragging ? 'Drop file here' : 'Select a Log File'}
-                    </h2>
-                    <p className="drop-zone-subtitle">
-                        {loading ? 'Detecting format and structure' : 'Drag & drop your file or browse to select'}
-                    </p>
+                    <input {...getInputProps()} />
 
-                    {!loading && (
-                        <button
-                            className="browse-button primary"
-                            onClick={onFileSelected}
-                            disabled={loading}
-                        >
-                            <File size={20} />
-                            Browse Files
-                        </button>
-                    )}
+                    <div className="drop-zone-content">
+                        <div className={`icon-wrapper ${isDragActive ? 'bounce' : ''}`}>
+                            {loading ? (
+                                <div className="loader-ring"><Database size={48} /></div>
+                            ) : isDragActive ? (
+                                <Upload size={56} className="text-accent" />
+                            ) : (
+                                <FileText size={56} className="text-secondary" />
+                            )}
+                        </div>
 
-                    <div className="supported-formats">
-                        <span>Supported: CSV, JSON, JSONL, LOG, TXT</span>
+                        <div className="text-content">
+                            <h2>
+                                {loading ? 'Processing Data...' : isDragActive ? 'Drop it like it\'s hot' : 'Select or Drop a File'}
+                            </h2>
+                            <p className="subtitle">
+                                {loading ? 'Analyzing structure and converting format' : 'Supports CSV, JSON, LOG, TXT'}
+                            </p>
+                        </div>
+
+                        {!loading && (
+                            <button
+                                className="btn btn--primary btn--lg trigger-btn"
+                                onClick={onFileSelected}
+                                type="button"
+                            >
+                                <File size={18} />
+                                Browse Local Files
+                            </button>
+                        )}
                     </div>
+
+                    {/* Background decoration */}
+                    <div className="drop-zone-bg-pattern"></div>
                 </div>
 
-                {/* Advanced Mode Filters */}
+                {/* Advanced Options Panel */}
                 {viewMode === 'advanced' && !loading && (
-                    <div className="advanced-options">
-                        <h3><Settings2 size={20} /> Advanced Options</h3>
-                        <div className="filter-grid">
-                            <label>
-                                <span>File Format</span>
-                                <select>
-                                    <option value="">Auto-detect</option>
+                    <div className="advanced-options glass-panel animate-slide-up">
+                        <div className="panel-header">
+                            <Settings2 size={18} className="text-accent" />
+                            <h3>Parser Configuration</h3>
+                        </div>
+                        <div className="options-grid">
+                            <div className="input-group">
+                                <label>File Format</label>
+                                <select className="select-input">
+                                    <option value="">Auto-Detect</option>
                                     <option value="csv">CSV</option>
                                     <option value="json">JSON</option>
-                                    <option value="jsonl">JSONL</option>
-                                    <option value="log">LOG</option>
                                 </select>
-                            </label>
-                            <label>
-                                <span>Encoding</span>
-                                <select>
+                            </div>
+                            <div className="input-group">
+                                <label>Encoding</label>
+                                <select className="select-input">
                                     <option value="utf8">UTF-8</option>
                                     <option value="ascii">ASCII</option>
-                                    <option value="latin1">Latin-1</option>
                                 </select>
-                            </label>
-                            <label>
-                                <span>Max Rows Preview</span>
-                                <input type="number" defaultValue={100} min={10} max={1000} />
-                            </label>
-                            <label className="checkbox-label">
-                                <input type="checkbox" defaultChecked />
-                                <span>Auto-detect delimiter</span>
-                            </label>
+                            </div>
                         </div>
                     </div>
                 )}
 
-                {/* Recent Files Section */}
+                {/* Recent Files */}
                 {!loading && (
-                    <div className="recent-files-section">
+                    <div className="recent-files-section animate-slide-up" style={{ animationDelay: '0.1s' }}>
                         <div className="section-header">
-                            <h3><Clock size={24} /> Recent Files</h3>
-                            <button className="clear-history-btn" title="Clear history">
-                                <X size={16} />
-                                Clear All
+                            <h3><Clock size={16} /> Recent Files</h3>
+                            <button className="btn btn--ghost btn--sm">
+                                Clear
                             </button>
                         </div>
 
-                        <div className="recent-files-grid">
+                        <div className="recent-grid">
                             {DUMMY_RECENT_FILES.map((file, index) => (
-                                <button
-                                    key={index}
-                                    className="recent-file-card"
-                                    onClick={() => handleRecentFileClick(file.path)}
-                                    disabled={loading}
-                                >
-                                    <div className="file-icon">
-                                        <FileText size={28} />
+                                <div key={index} className="recent-card glass-panel" onClick={() => console.log('Open', file.path)}>
+                                    <div className="file-icon-small">
+                                        <FileText size={20} />
                                     </div>
-                                    <div className="file-info">
-                                        <div className="file-name">{file.name}</div>
-                                        <div className="file-meta">
-                                            <span className="file-size">{file.size}</span>
-                                            <span className="file-separator">•</span>
-                                            <span className="file-time">{file.lastOpened}</span>
-                                        </div>
+                                    <div className="file-details">
+                                        <span className="file-name">{file.name}</span>
+                                        <span className="file-meta">{file.size} • {file.lastOpened}</span>
                                     </div>
-                                </button>
+                                </div>
                             ))}
                         </div>
-
-                        {DUMMY_RECENT_FILES.length === 0 && (
-                            <div className="empty-state">
-                                <FileText size={48} opacity={0.3} />
-                                <p>No recent files yet</p>
-                                <p className="empty-state-hint">Files you open will appear here for quick access</p>
-                            </div>
-                        )}
                     </div>
                 )}
             </div>

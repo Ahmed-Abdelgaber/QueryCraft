@@ -6,7 +6,13 @@
 
 .home-header {
     padding: 2rem;
-    border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--surface-glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 50;
 }
 
 .home-header-content {
@@ -20,13 +26,18 @@
 .home-header h1 {
     font-size: 2rem;
     font-weight: 700;
-    color: var(--text-primary, #e5e7eb);
-    margin-bottom: 0.25rem;
+    background: linear-gradient(to right, var(--text-primary), var(--accent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.02em;
 }
 
 .home-slogan {
-    color: var(--text-secondary, #9ca3af);
-    font-size: 1rem;
+    color: var(--text-secondary);
+    font-size: 1.125rem;
+    font-weight: 400;
 }
 
 .home-header-actions {
